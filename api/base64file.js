@@ -19,3 +19,4 @@ app.post("/base64file", async (req, res, next) => {
   res.end(`received bytes:` + req.headers['content-length']);
 })
 
+module.exports = app;
