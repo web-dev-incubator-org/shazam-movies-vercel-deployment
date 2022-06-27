@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://kit.fontawesome.com/f20978ae1e.js" crossorigin="anonymous"></script>
+  <title>WAZAM</title>
+</head>
+<html lang="en">
+  <body id="body">
+    <section>
+      <header>
+        <h1 id="logo">WAZAM
+          <a href="/"></a>
+        </h1>
+        <div id="container">
+          <button id="audio-button" onclick="recording()"> 
+            <i id="fa-microphone" class="fa-solid fa-microphone">
+            </i> Record
+          </button>
+          <h5 id="audio-status">Status: Not recording</h5>
+          <div id="container2">
+            <button id="play-audio">
+              <i class="fa-solid fa-play">
+              </i> Play Audio
+            </button>
+            <label for="file">
+              <div id="audio-result">
+                <i class="fa-solid fa-arrow-up-from-bracket">
+                </i> Upload
+              </div>
+              <input type="file" name="file" id="file" />
+            </label>
+          </div>
+        </div>
+        <!--I moved some tags around, also removed some text. idk if it will be problematic-->
+      </header>
+    </section>
+    <section id="r"></section>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script>
+      
+      var options = {};
+      var file = document.getElementById("file");
+      var button = document.getElementById("audio-button")
+      var status = document.getElementById("audio-status")
+      var fileReader = new FileReader();
+      var newFileReader = new FileReader();
+      var takenBlob;
+
+      var currentStatus = "NotRecording"
+
+      function filetoBase64(specifiedVar) {
+      var sr = 44100; // sample rate
+      var sl = 4; // 4 seconds
+      file.value = null;
+      specifiedVar.onload = (event) => {
+        var audioContext = new AudioContext({ sampleRate: sr });
+        var audioBuffer = audioContext.decodeAudioData(
+          event.target.result,
+          (buffer) => {
+            var sbf32 = new ArrayBuffer(buffer.length * 4);
+            var sbi16 = new ArrayBuffer(sr * 2 * sl);
+            var sbfloat32 = new Float32Array(sbf32);
+            var sbint16 = new Int16Array(sbi16);
+            var sbuint8 = new Uint8Array(sbi16);
+            var base64 = "";
+            buffer.copyFromChannel(sbfloat32, 0);
+
+            for (var i = 0; i < sr * sl; i++) {
+              var value = Math.floor(sbfloat32[i] * 32767);
+              sbint16[i] = value;
+            }
+            base64 = btoa(
+              sbuint8.reduce((data, byte) => data + String.fromCharCode(byte))
+            );
+            options.data = base64;
+
+            axios.post("/api/base64file.js", {"base64": base64})
+
+         //   axios
+         //   .request(options)
+         //   .then(function (response) {
+         //     var fullResponse = response.data
+         //     var songName = response.data.track.share.subject
+         //     var audioHeader = document.getElementById("audio-result").innerHTML = "Song: " + songName
+         //     cse(songName)
+         //     console.log(fullResponse);
+         //     console.log(songName);
+        //    })
+        //    .catch(function (error) {
+        //      console.error(error);
+        //    });
+
+
+          }
+        );
+
+  
+
+      };
+    }
+
+    function cse(q) {
+      console.log("cse:" + q)
+      var r = document.getElementById('r');
+      r.innerHTML = "";
+
+      fetch(`https://customsearch.googleapis.com/customsearch/v1?q=${q}&key=AIzaSyCsRpjJQCVzK5fUT6MJMZPKlLTqZJ6PIB8&cx=ffd56f262e76c9bd1`, {
+        method: "GET",
+      })
+      .then(response => response.json()) 
+      .then(json => {
+        json.items.forEach(i=> {
+          var fragment = "";
+          r.innerHTML += `
+              <a href="${i.link}" style="float:left; width:150px; text-align: center;">
+                <b>${i.pagemap.metatags[0].title}</b>
+                <img src="${i.pagemap.cse_image[0].src}" width="100px">
+                <p>${i.htmlSnippet}</p>
+                <br/>
+              </a>
+              `
+        })
+      })
+      .catch(err => console.log(err));
+    }
+
+    function sendBlobtoBase64(blob) {
+      newFileReader.readAsArrayBuffer(blob)
+      filetoBase64(newFileReader)
+    }
+
+   function TakeBlob() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+      let mediaRecorder = new MediaRecorder(stream);
+      currentStatus = "Recording"
+      document.getElementById("audio-status").innerHTML = "Recording"
+      mediaRecorder.start();
+  
+      let audioChunks = [];
+      mediaRecorder.addEventListener("dataavailable", event => {
+        audioChunks.push(event.data);
+      });
+  
+      mediaRecorder.addEventListener("stop", () => {
+        let audioBlob = new Blob(audioChunks);
+        let audioUrl = URL.createObjectURL(audioBlob);
+        globalThis.audio = new Audio(audioUrl);
+        document.getElementById("audio-status").innerHTML = "Not Recording"
+        currentStatus = "NotRecording"
+
+        sendBlobtoBase64(audioBlob)
+      });
+  
+      setTimeout(() => {
+        mediaRecorder.stop();
+      }, 3000);
+    });
+   }
+
+  
+
+      file.onchange = () => {
+        if (file && file.files[0]) {
+          fileReader.readAsArrayBuffer(file.files[0]);
+          filetoBase64(fileReader)
+        }
+      };
+
+      button.addEventListener("click", () => {
+        if (currentStatus == "NotRecording") {
+          TakeBlob()
+        }
+      })
+
+      document.getElementById("play-audio").addEventListener("click", () => {
+        audio.play();
+      })
+      function recording() {
+        let audioButton = document.getElementById("audio-button")
+        let faMic = document.getElementById("fa-microphone")
+        audioButton.style.animationPlayState = "running"
+        faMic.style.animationPlayState = "running"
+      } /*triggers onclick and runs css animation for recording
+         I can't figure out how to make it run only after allowing mic*/
+    </script>
+  </body>
+</html>
