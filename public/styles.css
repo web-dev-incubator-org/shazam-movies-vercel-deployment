@@ -185,3 +185,18 @@ a {
 input {
     display: none;
 }
+
+.start-button {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#song-name {
+    padding: 0px;
+    margin: 0px;
+    color: var(--red);
+    border-width: 1px;
+    letter-spacing: 0.01em;
+    font-size: 2.5em;
+}
